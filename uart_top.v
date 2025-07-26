@@ -1,5 +1,5 @@
 module uart_top #(
-    parameter CLOCK_FREQ = 27000000,    // System clock frequency in Hz
+    parameter CLOCK_FREQ = 81000000,    // System clock frequency in Hz
     parameter BAUD_RATE  = 3000000      // UART baud rate
 )(
     input clk,                          // System clock
@@ -11,6 +11,7 @@ module uart_top #(
     output rx_data_valid,               // High when new data received
     output [7:0] rx_data_out,          // Last received data
     output tx_busy                     // High when transmitting
+    
     
     // Optional error flags
     
@@ -55,14 +56,16 @@ module uart_top #(
     );
 
     //Multiplier
-    wire ce = 1;
-    
+//    wire ce = 1;
+//    wire [7:0] a = 8'hAB;
+//    wire [7:0] b = 8'h01;
+//    wire [15:0] dout;
 //    Gowin_MULT mult8x8(
 //        .dout(dout), //output [15:0] dout
 //        .a(a), //input [7:0] a
 //        .b(b), //input [7:0] b
 //        .ce(ce), //input ce
-//        .clk(clk_fast), //input clk
+//        .clk(clk), //input clk
 //        .reset(rst) //input reset
 //    );
     // Instantiate UART RX
@@ -102,7 +105,7 @@ module uart_top #(
             
             // When new data is received, store it for echo
             if (rx_done && !echo_pending) begin
-                echo_buffer <= rx_data*2;
+                echo_buffer <= rx_data;
                 echo_pending <= 1'b1;
             end
             
@@ -117,42 +120,10 @@ module uart_top #(
             // Clear busy flag after some time (simple timeout)
             // Note: This is a simple implementation. Better would be to have
             // a proper busy signal from uart_tx
-//            if (tx_busy_reg && tx_data_ready) begin
-//                tx_busy_reg <= 1'b0;
-//            end
+            if (tx_busy_reg && tx_data_ready) begin
+                tx_busy_reg <= 1'b0;
+            end
         end
     end
-    // Echo logic - automatically echo back received data
-//    always @(posedge clk or negedge rst_n) begin
-//        if (!rst_n) begin
-//            echo_buffer <= 8'h00;
-//            echo_pending <= 1'b0;
-//            tx_data <= 8'h00;
-//            tx_data_ready <= 1'b0;
-//            tx_busy_reg <= 1'b0;
-//        end else begin
-             //Default values
-//            tx_data_ready <= 1'b0;
-//            
-            // When new data is received, store it for echo
-//            if (rx_done && !echo_pending) begin
-//                echo_buffer <= rx_data*2;
-//                echo_pending <= 1'b1;
-//            end
-//            
-             //When we have data to echo and TX is not busy, send it
-//            if (echo_pending) begin
-//                tx_data <= echo_buffer;
-//                tx_data_ready <= 1'b1;
-//                echo_pending <= 1'b0;
-//                tx_busy_reg <= 1'b1;
-//            end
-//            
-            
-//            if (tx_busy_reg && tx_data_ready) begin
-//                tx_busy_reg <= 1'b0;
-//            end
-//        end
-//    end
 
 endmodule
