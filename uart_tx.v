@@ -13,7 +13,7 @@ reg baud_tick;
 localparam integer DIVIDER = CLOCK_FREQ / BAUD_RATE;
 reg [$clog2(DIVIDER)-1:0] counter = 0;
 
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk or negedge rst) begin
         if (!rst) begin
             counter   <= 0;
             baud_tick <= 0;
@@ -35,29 +35,13 @@ parameter IDLE = 0, LOAD_SR = 1, START = 2, TRANSFER = 3, STOP = 4;
 
 reg [7:0] clk_count;
 reg [2:0] prev_state, next_state;
-reg rd; 
-wire wr;
-wire full, empty;
-wire [7:0] sr_data_in; 
 wire done;
 reg parity;
 reg [7:0] TSR;
 reg [3:0] bit_count;
 
 
-fifo fifom (.clk(clk),
-            .rst(rst),
-            .data_in(data_in),
-            .rd(rd),
-            .wr(wr),
-            .data_out(sr_data_in),
-            .full(full),
-            .empty(empty),
-            .done(done));
-
-assign wr = (full)? 1'b0: data_ready;
-
-always @(posedge clk) begin
+always @(posedge clk or negedge rst) begin
     if (!rst) begin
         prev_state <= IDLE;
     end
@@ -70,14 +54,14 @@ always @(*) begin
     next_state = IDLE;
     case(prev_state)
         IDLE: begin
-            if (empty != 1) begin
+            if (data_ready == 1) begin
                 next_state = LOAD_SR;
             end
             else
                 next_state = IDLE;
         end        
         LOAD_SR: begin
-            if ((TSR != 8'h00) && (baud_tick))
+            if (baud_tick)
                 next_state = START;
             else 
                 next_state = LOAD_SR;
@@ -107,10 +91,9 @@ always @(*) begin
     endcase
 end
 
-always @(posedge clk ) begin
-    if (rst == 0) begin
+always @(posedge clk or negedge rst) begin
+    if (!rst) begin
         TSR <= 8'h00;
-        rd <= 0;
         Tx <= 1;
         clk_count <= 0;
         bit_count <= 0;
@@ -120,21 +103,17 @@ always @(posedge clk ) begin
         case (prev_state)
             IDLE: begin
                 TSR <= 8'h00;
-                rd <= 0;
                 Tx <= 1;
                 clk_count <= 0;
                 bit_count <= 0;
                 parity <= 0;
             end
             LOAD_SR: begin
-                rd <= 1;
-                if (done)
-                    TSR <= sr_data_in;
+                TSR <= data_in;
             end
 
             START: begin 
                 Tx <= 0;
-                rd <= 0;   
             end
             TRANSFER: begin
                 if (baud_tick) begin
@@ -155,15 +134,6 @@ always @(posedge clk ) begin
                 end
             end
             
-            // PARITY: begin
-            //     Tx <= parity;
-            //     if (clk_count < 10) 
-            //         clk_count  <= clk_count + 1;
-            //     else begin
-            //         bit_count <= 0;
-            //     end
-            // end
-
             STOP: begin
                 if (baud_tick) begin
                     Tx <= 1;
@@ -172,7 +142,6 @@ always @(posedge clk ) begin
             end
             default: begin
                 TSR <= 8'h00;
-                rd <= 0;
                 Tx <= 1;
                 bit_count <= 0;
                 parity <= 0;
