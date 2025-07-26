@@ -93,7 +93,8 @@ module uart_rx #(
                 parity_err <= 0;
                 stop_err <= 0;
                 parity_check_done <= 0;
-                //done <= 0;
+                done <= 0;
+                //data_out <= 0;
             end
 
             else if (state == RECEIVE && oversample_tick) begin
